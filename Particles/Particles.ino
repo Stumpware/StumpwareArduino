@@ -10,8 +10,8 @@
 #define MIN_BATCH_MILLIS 3000
 #define EMITTER_TRANSIT_MILLIS 20000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
-#define MAX_THROBBER 1.0
-#define MIN_THROBBER -0.75
+#define MAX_THROBBER 0.4
+#define MIN_THROBBER -1.7
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -24,7 +24,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, PIN, NEO_GRB + NEO_KHZ80
 ParticleEmitter emitter = ParticleEmitter(NUM_PIXELS);
 
 float throbber = MAX_THROBBER;
-float throbberDelta = -0.00006;
+float throbberDelta = -0.00007;
 float emitterTransitStartMillis = 0; 
 float emitterTransitDirection = 1;
 
@@ -35,7 +35,7 @@ uint8_t randomBlueColor = 0;
 
 
 void setup() {
-  Serial.begin(9600);
+//  Serial.begin(9600);
   randomSeed(analogRead(0));
   strip.begin();
   strip.show();
@@ -43,7 +43,7 @@ void setup() {
 }
 
 void loop() {  
-  boolean drawTails = (random(2) == 0);
+  boolean drawTails = (random(10) > 4);
   unsigned long startMillis = millis();
   unsigned long elapsedMillis = 0;
   unsigned long batchMillis = (MAX_BATCH_MILLIS - MIN_BATCH_MILLIS) * (random(100) / 100) + MIN_BATCH_MILLIS;  
@@ -53,7 +53,6 @@ void loop() {
     
     float emitterTransitOffset = ((EMITTER_TRANSIT_MILLIS - (millis() - emitterTransitStartMillis)) / EMITTER_TRANSIT_MILLIS);
     
-    Serial.println(emitterTransitOffset);
     emitter.stripPosition = (emitterTransitDirection > 0 ? emitterTransitOffset : 1 - emitterTransitOffset);
     
     if (emitter.stripPosition >= 1.0 || emitter.stripPosition <= 0.0) {
@@ -96,7 +95,7 @@ void loop() {
       boolean respawn = (elapsedMillis > (batchMillis * 0.5));
       particle prt = emitter.updateParticle(i, respawn);
 
-      uint8_t tailLength = (drawTails ? abs(prt.velocity * 15) : 2);
+      uint8_t tailLength = (drawTails ? abs(prt.velocity * 8) : 2);
       uint16_t startSlot = NUM_PIXELS * prt.currentStripPosition;
       uint16_t currentSlot = startSlot;
       uint16_t oldSlot = currentSlot;
@@ -106,14 +105,14 @@ void loop() {
       for (int z=0; z < tailLength; z++) { 
         
         // Taper the tail fade  
-        float colorScale = ((tailLength-z*0.997) / tailLength);
+        float colorScale = ((tailLength - (z * 0.25)) / tailLength);
 
         if (z == 0 && prt.dimmed) {
           // Flicker the first particle
           colorScale *= (0.5 * random(100) / 100) + 0.05;
         }      
 
-        if (colorScale < 0.15) { colorScale = 0.15; }
+        if (colorScale < 0.05) { colorScale = 0.05; }
 
         strip.setPixelColor(currentSlot, 
                             strip.Color(prt.redColor*colorScale, 
