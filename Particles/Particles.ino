@@ -1,14 +1,17 @@
 #include <Adafruit_NeoPixel.h>
 #include "ParticleEmitter.h"
 
-#define PIN 6
-#define MIN_COLOR 100
-#define MAX_COLOR 255
-#define NUM_PIXELS 300
-#define MAX_EMITTER_POSITION_MILLIS 3000
-#define MIN_EMITTER_POSITION_MILLIS 1000
 #define FPS 40
+#define PIN 6
+#define MAX_COLOR 255
+#define MIN_COLOR 30
+#define NUM_PIXELS 235
+#define MAX_BATCH_MILLIS 3000
+#define MIN_BATCH_MILLIS 3000
+#define EMITTER_TRANSIT_MILLIS 20000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
+#define MAX_THROBBER 1.0
+#define MIN_THROBBER -0.75
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -20,35 +23,43 @@
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, PIN, NEO_GRB + NEO_KHZ800);
 ParticleEmitter emitter = ParticleEmitter(NUM_PIXELS);
 
-#define MAX_THROBBER 1.0
-#define MIN_THROBBER -0.75
 float throbber = MAX_THROBBER;
 float throbberDelta = -0.00006;
+float emitterTransitStartMillis = 0; 
+float emitterTransitDirection = 1;
 
+unsigned long frameStartMillis = 0;
 uint8_t randomRedColor = 0;
 uint8_t randomGreenColor = 0;
 uint8_t randomBlueColor = 0;
 
 
 void setup() {
-//  Serial.begin(9600);
+  Serial.begin(9600);
   randomSeed(analogRead(0));
   strip.begin();
   strip.show();
+  emitterTransitStartMillis = millis();
 }
-
-unsigned long frameStartMillis = 0;
 
 void loop() {  
   boolean drawTails = (random(2) == 0);
   unsigned long startMillis = millis();
   unsigned long elapsedMillis = 0;
+  unsigned long batchMillis = (MAX_BATCH_MILLIS - MIN_BATCH_MILLIS) * (random(100) / 100) + MIN_BATCH_MILLIS;  
 
-  unsigned long positionMillis = (MAX_EMITTER_POSITION_MILLIS - MIN_EMITTER_POSITION_MILLIS) * (random(100) / 100) + MIN_EMITTER_POSITION_MILLIS;
-  emitter.stripPosition = random(100) / 100.0;
-
-  while (elapsedMillis <= positionMillis) {
+  while (elapsedMillis <= batchMillis) {
     frameStartMillis = millis();
+    
+    float emitterTransitOffset = ((EMITTER_TRANSIT_MILLIS - (millis() - emitterTransitStartMillis)) / EMITTER_TRANSIT_MILLIS);
+    
+    Serial.println(emitterTransitOffset);
+    emitter.stripPosition = (emitterTransitDirection > 0 ? emitterTransitOffset : 1 - emitterTransitOffset);
+    
+    if (emitter.stripPosition >= 1.0 || emitter.stripPosition <= 0.0) {
+      emitterTransitStartMillis = millis();
+      emitterTransitDirection *= -1;
+    }
 
     // Pulse the whole strip
     for(uint16_t i=0; i<strip.numPixels(); i++) {
@@ -82,7 +93,7 @@ void loop() {
     for (int i=0; i < emitter.numParticles; i++) {
 
       // Update this particle's position
-      boolean respawn = (elapsedMillis > (positionMillis * 0.33));
+      boolean respawn = (elapsedMillis > (batchMillis * 0.5));
       particle prt = emitter.updateParticle(i, respawn);
 
       uint8_t tailLength = (drawTails ? abs(prt.velocity * 15) : 2);
@@ -118,7 +129,7 @@ void loop() {
     }
 
     // Draw the spawn point
-    uint8_t spawnColor = MIN_COLOR * random(100) / 100;
+    uint8_t spawnColor = MAX_COLOR /2 * random(100) / 100;
     strip.setPixelColor(emitter.stripPosition*NUM_PIXELS, 
                         strip.Color(random(2) == 0 ? 0 : spawnColor,
                                     random(2) == 0 ? 0 : spawnColor, 
