@@ -1,8 +1,7 @@
 #include <Adafruit_NeoPixel.h>
-#include "ParticleEmitter.h"
+#include "LEDStripParticleEmitter.h"
 
-//#define NUM_PIXELS 235 banister
-#define NUM_PIXELS 17
+#define NUM_PIXELS 235
 
 #define FPS 60
 #define PIN 6
@@ -10,10 +9,10 @@
 #define MIN_COLOR 30
 #define MAX_BATCH_MILLIS 3000
 #define MIN_BATCH_MILLIS 3000
-#define EMITTER_TRANSIT_MILLIS 17000  // millis to reach other side
+#define EMITTER_TRANSIT_MILLIS 235000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
-#define MAX_THROBBER 1.0
-#define MIN_THROBBER -0.25
+#define MAX_THROBBER 0.6
+#define MIN_THROBBER -1.0
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -26,7 +25,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, PIN, NEO_GRB + NEO_KHZ80
 ParticleEmitter emitter = ParticleEmitter(NUM_PIXELS);
 
 float throbber = MAX_THROBBER;
-float throbberDelta = -0.0005;
+float throbberDelta = -0.0007;
 float emitterTransitStartMillis = 0; 
 float emitterTransitDirection = 1;
 
@@ -37,15 +36,19 @@ uint8_t randomBlueColor = 0;
 
 
 void setup() {
-  Serial.begin(9600);
+//  Serial.begin(9600);
   randomSeed(analogRead(0));
   strip.begin();
   strip.show();
+  
+  emitter.respawnOnOtherSide = 0;
+  emitter.numParticles = min(NUM_PIXELS / 6, 10);
+
   emitterTransitStartMillis = millis();
 }
 
 void loop() {  
-  boolean drawTails = 0;// (random(10) > 4);
+  boolean drawTails = (random(10) > 4);
   unsigned long startMillis = millis();
   unsigned long elapsedMillis = 0;
   unsigned long batchMillis = (MAX_BATCH_MILLIS - MIN_BATCH_MILLIS) * (random(100) / 100) + MIN_BATCH_MILLIS;  
@@ -76,19 +79,16 @@ void loop() {
         
         if (throbber <= MIN_THROBBER) { 
           // Change the strip color
-          randomRedColor = random(255);
+          randomRedColor = random(100) + 155;
           randomGreenColor = random(145);
-          randomBlueColor = 0;
+          randomBlueColor = random(25);
 
           // Slightly vary the throb time
           throbberDelta += (random(2) == 0 ? 1 : -1) * (random(100) / 100 * 0.001);    
 
           // Change the particle velocities
           // There's a small chance of high speed
-//          emitter.maxVelocity = (random(100) / 100.0 * 0.006) * (random(6) == 0 ? 2 : 1) + 0.004;
-
-          // HOWL
-          emitter.maxVelocity = (random(100) / 100.0 * 0.6) * + 0.1;
+          emitter.maxVelocity = (random(100) / 100.0 * 0.006) * (random(6) == 0 ? 2 : 1) + 0.004;
         }
       }            
     }
@@ -100,10 +100,7 @@ void loop() {
       boolean respawn = (elapsedMillis > (batchMillis * 0.5));
       particle prt = emitter.updateParticle(i, respawn);
 
-
-//      uint8_t tailLength = (drawTails ? abs(prt.velocity * 8) : 2);
-        // HOWL
-      uint8_t tailLength = (drawTails ? abs(prt.velocity * 5) : 2);
+      uint8_t tailLength = (drawTails ? abs(prt.velocity * 8) : 2);
       uint16_t startSlot = NUM_PIXELS * prt.currentStripPosition;
       uint16_t currentSlot = startSlot;
       uint16_t oldSlot = currentSlot;
@@ -113,7 +110,6 @@ void loop() {
       for (int z=0; z < tailLength; z++) { 
         
         // Taper the tail fade  
-//        float colorScale = ((tailLength - (z * 0.25)) / tailLength);
         float colorScale = ((tailLength - (z * 0.25)) / tailLength);
 
         if (z == 0 && prt.dimmed) {
@@ -121,8 +117,11 @@ void loop() {
           colorScale *= (0.5 * random(100) / 100) + 0.05;
         }      
 
-        if (colorScale < 0.05) { colorScale = 0.05; }
+        if (colorScale < 0.05) {
+          colorScale = 0.05;
+        }
 
+        // Draw particle
         strip.setPixelColor(currentSlot, 
                             strip.Color(prt.redColor*colorScale/2, 
                                         prt.blueColor*colorScale/20, 
@@ -137,23 +136,16 @@ void loop() {
     }
 
     // Draw the spawn point
-//    uint8_t spawnColor = 10 * random(100) / 100;
-    uint8_t spawnColor = MAX_COLOR / 3 * random(100) / 100;
+    uint8_t spawnColor = (MAX_COLOR / 3 * random(100) / 100);
     strip.setPixelColor(emitter.stripPosition*NUM_PIXELS, 
-                        strip.Color(random(2) == 0 ? 0 : 0,
+                        strip.Color(random(2) == 0 ? 0 : random(100) + 155,
                                     random(2) == 0 ? 0 : random(145), 
-                                    random(2) == 0 ? 0 : random(255)));
-                                    
-//    strip.setPixelColor(emitter.stripPosition*NUM_PIXELS, 
-//                        strip.Color(random(2) == 0 ? 0 : spawnColor,
-//                                    random(2) == 0 ? 0 : spawnColor/20, 
-//                                    random(2) == 0 ? 0 : spawnColor/2));
-    
+                                    random(2) == 0 ? 0 : 0));
+
     uint16_t frameElapsedMillis = millis() - frameStartMillis;
     uint16_t frameDelayMillis = 0;
     
-    if (MILLIS_PER_FRAME > frameElapsedMillis)
-    {
+    if (MILLIS_PER_FRAME > frameElapsedMillis) {
       frameDelayMillis = MILLIS_PER_FRAME - frameElapsedMillis;
     }    
 
