@@ -13,9 +13,9 @@
 #define MIN_BATCH_MILLIS 5000
 #define EMITTER_TRANSIT_MILLIS 117500// 235000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
-#define MAX_THROBBER 0.3236
+#define MAX_THROBBER  0.1618 //0.3236
 #define MIN_THROBBER -0.6472
-#define THROBBER_DELTA -0.00003
+#define THROBBER_DELTA -0.000025
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -64,14 +64,12 @@ void loop() {
   while (elapsedMillis <= batchMillis) {
     frameStartMillis = millis();
     
-    float emitterTransitOffset = ((EMITTER_TRANSIT_MILLIS - (millis() - emitterTransitStartMillis)) / EMITTER_TRANSIT_MILLIS);
-    
-    emitter.stripPosition = (emitterTransitDirection > 0 ? emitterTransitOffset : 1 - emitterTransitOffset);
-    
-    if (emitter.stripPosition >= 1.0 || emitter.stripPosition <= 0.0) {
-      emitterTransitStartMillis = millis();
-      emitterTransitDirection *= -1;
-    }
+//    float emitterTransitOffset = ((EMITTER_TRANSIT_MILLIS - (millis() - emitterTransitStartMillis)) / EMITTER_TRANSIT_MILLIS);  
+//    emitter.stripPosition = (emitterTransitDirection > 0 ? emitterTransitOffset : 1 - emitterTransitOffset);
+//    if (emitter.stripPosition >= 1.0 || emitter.stripPosition <= 0.0) {
+//      emitterTransitStartMillis = millis();
+//      emitterTransitDirection *= -1;
+//    }
 
     // Pulse the whole strip
     for (uint16_t i=0; i<strip.numPixels(); i++) {
@@ -92,7 +90,7 @@ void loop() {
           randomBlueColor = random(MAX_COLOR);
 
           // Slightly vary the throb time
-          throbberDelta += (random(2) == 0 ? 1 : -1) * (random(100) / 100 * 0.001);    
+          throbberDelta += (random(2) == 0 ? 1 : -1) * (random(100) / 100 * 0.005);    
 
           // Change the particle velocities
           // There's a small chance of high speed
