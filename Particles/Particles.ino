@@ -6,7 +6,7 @@
 
 #define FPS 210
 #define PIN 6
-#define MAX_COLOR 64  //127    // 255
+#define MAX_COLOR 127    // 255
 #define MIN_COLOR 3
 #define MAX_VELOCITY 0.015
 #define MAX_BATCH_MILLIS 40000
@@ -15,7 +15,7 @@
 #define MILLIS_PER_FRAME (1000 / FPS)
 #define MAX_THROBBER 0.3236
 #define MIN_THROBBER -0.6472
-#define THROBBER_DELTA -0.00002
+#define THROBBER_DELTA -0.00003
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -165,7 +165,7 @@ void loop() {
                                                   MAX_COLOR*colorScale*prt.coord.z));
               break;
             case 3:
-              colorScale = prt.coord.z;
+              colorScale = (1.0 - prt.coord.z);
               setCoordColor(prt.coord, strip.Color(prt.redColor*colorScale, 
                                                    prt.greenColor*colorScale, 
                                                    prt.blueColor*colorScale));
