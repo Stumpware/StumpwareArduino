@@ -2,19 +2,20 @@
 #include "LEDStripParticleEmitter.h"
 
 #define NUM_PIXELS 128
-#define NUM_PARTICLES 4
+#define NUM_PARTICLES 18
 
-#define FPS 60
+#define FPS 210
 #define PIN 6
-#define MAX_COLOR 20    // 255
+#define MAX_COLOR 64  //127    // 255
 #define MIN_COLOR 3
-#define MAX_VELOCITY 0.02
-#define MAX_BATCH_MILLIS 5000
-#define MIN_BATCH_MILLIS 3500
+#define MAX_VELOCITY 0.015
+#define MAX_BATCH_MILLIS 40000
+#define MIN_BATCH_MILLIS 5000
 #define EMITTER_TRANSIT_MILLIS 117500// 235000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
-#define MAX_THROBBER 0.3
-#define MIN_THROBBER 0.1
+#define MAX_THROBBER 0.3236
+#define MIN_THROBBER -0.6472
+#define THROBBER_DELTA -0.00002
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -27,7 +28,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, PIN, NEO_GRB + NEO_KHZ80
 ParticleEmitter emitter = ParticleEmitter(NUM_PIXELS, MAX_COLOR);
 
 float throbber = MAX_THROBBER;
-float throbberDelta =  0.0;  // -0.000009;
+float throbberDelta = THROBBER_DELTA;
 float emitterTransitStartMillis = 0; 
 float emitterTransitDirection = 1;
 
@@ -39,12 +40,12 @@ uint8_t randomBlueColor = 0;
 void setCoordColor(Coord3D coord, uint32_t color);
 
 void setup() {
-  Serial.begin(9600);
-  randomSeed(analogRead(0));
+//  Serial.begin(9600);
   strip.begin();
   strip.show();
   
-  emitter.respawnOnOtherSide = false;
+  emitter.respawnOnOtherSide = true;
+  emitter.threed = true;
   emitter.numParticles = NUM_PARTICLES;
   emitter.maxVelocity = MAX_VELOCITY;
   
@@ -58,6 +59,7 @@ void loop() {
   unsigned long elapsedMillis = 0;
   unsigned long batchMillis = (MAX_BATCH_MILLIS - MIN_BATCH_MILLIS) * (random(100) / 100) + MIN_BATCH_MILLIS;  
   emitter.respawnOnOtherSide = !emitter.respawnOnOtherSide;
+  emitter.numParticles = random(NUM_PARTICLES) + 1;
 
   while (elapsedMillis <= batchMillis) {
     frameStartMillis = millis();
@@ -94,9 +96,22 @@ void loop() {
 
           // Change the particle velocities
           // There's a small chance of high speed
-          emitter.maxVelocity = (random(100) / 100.0 * 0.006) * (random(6) == 0 ? 2 : 1) + 0.004;
-        }
-      }            
+//          emitter.maxVelocity = (random(100) / 100.0 * 0.006) * (random(6) == 0 ? 2 : 1) + 0.004;
+          emitter.maxVelocity = (random(30) / 100.0 * MAX_VELOCITY + MAX_VELOCITY*0.7);
+          float scale = random(6);
+          if (scale == 0) {
+            scale = 0.33;
+          }
+          else if (scale == 1) {
+            scale = 3.0;
+          }
+          else {
+            scale = 1.0;
+          }
+          
+          emitter.maxVelocity *= scale;
+       }
+     }
     }
 
     // Draw each particle
@@ -106,7 +121,7 @@ void loop() {
       boolean respawn = (elapsedMillis > (batchMillis * 0.5));
       Particle prt = emitter.updateParticle(i, respawn);
 
-      uint8_t tailLength = (drawTails ? abs(prt.velocity.x * 8) : 2);
+      uint8_t tailLength = (drawTails ? abs(prt.velocity.x * 8) : 1);
       int16_t startSlot = NUM_PIXELS * prt.coord.x;
       int16_t currentSlot = startSlot;
       int16_t oldSlot = currentSlot;
@@ -120,7 +135,7 @@ void loop() {
 
         if (z == 0 && prt.dimmed) {
           // Flicker the first particle
-          colorScale *= (0.5 * random(100) / 100) + 0.05;
+          colorScale *= (random(50) / 100) + 0.05;
         }      
 
         if (colorScale < 0.05) {
@@ -133,10 +148,36 @@ void loop() {
 //                                        prt.blueColor*colorScale, 
 //                                        prt.greenColor*colorScale));
 
-        setCoordColor(prt.coord, 
-                      strip.Color(prt.redColor*colorScale, 
-                                  prt.blueColor*colorScale, 
-                                  prt.greenColor*colorScale));
+        if (emitter.threed) {
+          byte colorMode = 3;
+          
+          switch (colorMode) {
+            case 1:
+              colorScale = 1.0;
+              setCoordColor(prt.coord, strip.Color(prt.redColor*colorScale*(1.0 - prt.coord.z),
+                                                  (prt.coord.z < 0.33 ? MAX_COLOR*prt.coord.z : 0), 
+                                                  (prt.coord.z > 0.66 ? MAX_COLOR*prt.coord.z : 0)));
+              break;
+            case 2:
+              colorScale = 1.0;
+              setCoordColor(prt.coord, strip.Color(MAX_COLOR*colorScale*(1.0 - prt.coord.z),
+                                                  prt.greenColor*colorScale, 
+                                                  MAX_COLOR*colorScale*prt.coord.z));
+              break;
+            case 3:
+              colorScale = prt.coord.z;
+              setCoordColor(prt.coord, strip.Color(prt.redColor*colorScale, 
+                                                   prt.greenColor*colorScale, 
+                                                   prt.blueColor*colorScale));
+              break;
+          }
+        }
+        else {
+          setCoordColor(prt.coord, 
+                        strip.Color(prt.redColor*colorScale, 
+                                    prt.greenColor*colorScale, 
+                                    prt.blueColor*colorScale));
+        }
 
         oldSlot = currentSlot;
         currentSlot = startSlot + ((z+1) * (prt.velocity.x > 0 ? -1 : 1));
@@ -197,6 +238,7 @@ void setCoordColor(Coord3D coord, uint32_t color) {
 //      Serial.println(index);
       
   strip.setPixelColor(index, color); 
+ 
   
 }
 
