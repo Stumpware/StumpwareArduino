@@ -1,21 +1,21 @@
 #include <Adafruit_NeoPixel.h>
 #include "LEDStripParticleEmitter.h"
 
-#define NUM_PIXELS 90
-#define NUM_PARTICLES 40
+#define NUM_PIXELS 30
+#define NUM_PARTICLES 30
 
 #define FPS 210
 #define PIN 11
 #define MAX_COLOR 255   // max 255
 #define MIN_COLOR 3
-#define MAX_VELOCITY 0.015   //0.015
+#define MAX_VELOCITY 0.015
 #define MAX_BATCH_MILLIS 3000
 #define MIN_BATCH_MILLIS 1000
 #define EMITTER_TRANSIT_MILLIS 3000 // 235000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
 #define MAX_THROBBER  0.1618 //0.3236
 #define MIN_THROBBER -0.6472
-#define THROBBER_DELTA -0.000055  //-0.000025
+#define THROBBER_DELTA -0.000035  //-0.000025
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -128,23 +128,23 @@ boolean senseMotionAndLight() {
     motion2State = digitalRead(pirPin2);
     motion3State = digitalRead(pirPin3);    
 
-    Serial.print(daytime);
-    Serial.print(" day :: ");
-    Serial.print(motion1State);
-    Serial.print(" ");
-    Serial.print(motion2State);
-    Serial.print(" ");
-    Serial.print(motion3State);
-
-    Serial.print(" --- ");
-    Serial.print(cumMotion1);
-    Serial.print(" ");
-    Serial.print(cumMotion2);
-    Serial.print(" ");
-    Serial.print(cumMotion3);
-
-    Serial.print(" --- ");
-    Serial.println(cumMotionDelta);
+//    Serial.print(daytime);
+//    Serial.print(" day :: ");
+//    Serial.print(motion1State);
+//    Serial.print(" ");
+//    Serial.print(motion2State);
+//    Serial.print(" ");
+//    Serial.print(motion3State);
+//
+//    Serial.print(" --- ");
+//    Serial.print(cumMotion1);
+//    Serial.print(" ");
+//    Serial.print(cumMotion2);
+//    Serial.print(" ");
+//    Serial.print(cumMotion3);
+//
+//    Serial.print(" --- ");
+//    Serial.println(cumMotionDelta);
     
     lastCumMotionCheckMillis = millis();
         
@@ -183,13 +183,16 @@ boolean senseMotionAndLight() {
     
     
     // particles
-    float cumMotion = cumMotion1 + cumMotion2 + cumMotion3;
-    Serial.print("** ");
-    Serial.println(cumMotion / CUM_MOTION_MAX_SEC);
-    
-    emitter.numParticles = (NUM_PARTICLES*0.25) + ((NUM_PARTICLES*0.75) * (cumMotion / CUM_MOTION_MAX_SEC));
+    float cumMotion = cumMotion1 + cumMotion2 + cumMotion3;    
+    emitter.numParticles = (NUM_PARTICLES*0.5) + ((NUM_PARTICLES*0.5) * (cumMotion / CUM_MOTION_MAX_SEC));
 //    emitter.maxVelocity = (MAX_VELOCITY*0.25) * ((MAX_VELOCITY*0.75) * (cumMotion / CUM_MOTION_MAX_SEC));
 //    throbberDelta = (THROBBER_DELTA*0.25) * ((THROBBER_DELTA*0.75) * (cumMotion / CUM_MOTION_MAX_SEC));
+
+//    Serial.print("** ");
+//    Serial.print(cumMotion / CUM_MOTION_MAX_SEC);
+//    Serial.print(" : ");
+//    Serial.println(emitter.numParticles);
+
   }
 
   lightLevel = analogRead(lightSensorPin);
@@ -216,8 +219,14 @@ boolean senseMotionAndLight() {
     // always on
     light1State = light2State = light3State = HIGH;
   }
+  else if (mode == 2) {
+    // Simple direct motion control of lights. Use hardware adjusters.
+    light1State = motion1State;
+    light2State = motion2State;
+    light3State = motion3State;
+  }
   else {
-    // Simple direct motion control of lights.        
+    // cumulative motion (doesn't work very well)
     light1State = (cumMotion1 > 0 ? HIGH : LOW);
     light2State = (cumMotion2 > 0 ? HIGH : LOW);
     light3State = (cumMotion3 > 0 ? HIGH : LOW);
@@ -319,7 +328,8 @@ void autoTune()
 }
 
 void goDark() {
-  light1State = light2State = light3State = LOW;
+  // Take the relay HIGH which turns the light off.
+  light1State = light2State = light3State = HIGH;
   
   digitalWrite(lightPin1, light1State);
   digitalWrite(lightPin2, light2State);

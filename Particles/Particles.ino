@@ -1,17 +1,17 @@
 #include <Adafruit_NeoPixel.h>
 #include "LEDStripParticleEmitter.h"
 
-#define NUM_PIXELS 128
-#define NUM_PARTICLES 18
+#define NUM_PIXELS 90
+#define NUM_PARTICLES 12
 
 #define FPS 210
-#define PIN 6
-#define MAX_COLOR 127    // 255
+#define PIN 11
+#define MAX_COLOR 255   // max 255
 #define MIN_COLOR 3
 #define MAX_VELOCITY 0.015
-#define MAX_BATCH_MILLIS 40000
-#define MIN_BATCH_MILLIS 5000
-#define EMITTER_TRANSIT_MILLIS 117500// 235000  // millis to reach other side
+#define MAX_BATCH_MILLIS 3000
+#define MIN_BATCH_MILLIS 1000
+#define EMITTER_TRANSIT_MILLIS 3000 // 235000  // millis to reach other side
 #define MILLIS_PER_FRAME (1000 / FPS)
 #define MAX_THROBBER  0.1618 //0.3236
 #define MIN_THROBBER -0.6472
